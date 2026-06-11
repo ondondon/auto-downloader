@@ -13,9 +13,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build with Docker
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           docker run --rm \
             -v "$(pwd)":/home/user/auto-downloader \
@@ -23,14 +20,13 @@ jobs:
             -u $(id -u):$(id -g) \
             kivy/buildozer:latest \
             /bin/bash -c "
-              pip install -r requirements.txt 2>/dev/null || true;
-              buildozer android debug;
+              pip install -r requirements.txt 2>/dev/null || true
+              buildozer android debug
               cp bin/*.apk /home/user/auto-downloader/ 2>/dev/null || true
             "
 
       - name: Fix APK permissions
-        run: |
-          chmod 644 bin/*.apk 2>/dev/null || true
+        run: chmod 644 bin/*.apk 2>/dev/null || true
 
       - name: Upload APK as artifact
         if: success()
@@ -42,21 +38,15 @@ jobs:
 
       - name: Notify via Telegram on success
         if: success()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           APK_PATH=$(find bin -name "*.apk" | head -1)
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "text=✅ Auto-Downloader APK build successful!%0AFile: ${APK_PATH}"
 
       - name: Notify via Telegram on failure
         if: failure()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "text=❌ Auto-Downloader APK build FAILED"
