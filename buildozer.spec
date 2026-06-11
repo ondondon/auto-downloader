@@ -7,6 +7,9 @@ version = 1.0.0
 orientation = portrait
 fullscreen = 0
 
+source.dir = .
+source.include_patterns = app/*,*.py,requirements.txt
+
 requirements = python3,flet,gallery-dl,requests,html2text,imageio,mutagen
 
 [presplash]
