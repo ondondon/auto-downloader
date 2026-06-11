@@ -1,0 +1,99 @@
+name: Build Android APK (Docker)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.11-slim
+    steps:
+      # Note: GitHub Actions ubuntu-latest uses ARM, but we run x86 Docker container
+      # If running on ARM runner, you'd need arm32v7/python:3.11 or cross-compile
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git curl unzip wget openjdk-17-jdk-headless \
+            build-essential python3-dev sqlite3 libsqlite3-dev \
+            libncurses5-dev zlib1g-dev libffi-dev libssl-dev \
+            cmake pkg-config
+
+      - name: Set up Java
+        run: |
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          echo "ANDROID_HOME=/opt/android-sdk" >> $GITHUB_ENV
+
+      - name: Download Android SDK
+        run: |
+          mkdir -p /opt/android-sdk/cmdline-tools
+          cd /opt/android-sdk/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip
+          mv cmdline-tools latest
+          rm cmdline-tools.zip
+
+      - name: Accept SDK licenses
+        run: |
+          export ANDROID_HOME=/opt/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: Install SDK components
+        run: |
+          export ANDROID_HOME=/opt/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m venv /opt/venv
+          /opt/venv/bin/pip install --upgrade pip
+          /opt/venv/bin/pip install -r requirements.txt
+          /opt/venv/bin/pip install buildozer cython
+
+      - name: Build debug APK
+        env:
+          ANDROID_HOME: /opt/android-sdk
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+        run: |
+          source /opt/venv/bin/activate
+          export ANDROID_HOME=/opt/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+          buildozer android debug
+
+      - name: Upload APK as artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoDownloader-debug
+          path: bin/*.apk
+          retention-days: 7
+
+      - name: Notify via Telegram (success)
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: *** secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          APK_PATH=$(find bin -name "*.apk" | head -1)
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=✅ Auto-Downloader APK build successful!%0AArtifact: ${APK_PATH}"
+
+      - name: Notify via Telegram (failure)
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: *** secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=❌ Auto-Downloader APK build FAILED"
