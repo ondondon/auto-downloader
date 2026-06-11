@@ -75,10 +75,10 @@ jobs:
           path: bin/*.apk
           retention-days: 7
 
-      - name: Notify via Telegram (success)
+      - name: Notify via Telegram on success
         if: success()
         env:
-          TELEGRAM_BOT_TOKEN: *** secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           APK_PATH=$(find bin -name "*.apk" | head -1)
@@ -86,10 +86,10 @@ jobs:
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
             -d "text=✅ Auto-Downloader APK build successful!%0AFile: ${APK_PATH}"
 
-      - name: Notify via Telegram (failure)
+      - name: Notify via Telegram on failure
         if: failure()
         env:
-          TELEGRAM_BOT_TOKEN: *** secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
