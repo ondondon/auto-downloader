@@ -25,7 +25,7 @@ jobs:
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
 
-      - name: Download Android SDK
+      - name: Download and setup Android SDK
         run: |
           mkdir -p $HOME/android-sdk/cmdline-tools
           cd $HOME/android-sdk/cmdline-tools
@@ -35,11 +35,14 @@ jobs:
           rm cmdline-tools.zip
 
       - name: Accept licenses and install SDK components
+        env:
+          ANDROID_HOME: ${{ runner.temp }}/android-sdk
         run: |
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-          yes | sdkmanager --licenses > /dev/null 2>&1
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
+          yes | sdkmanager --licenses || true
+          sdkmanager --update || true
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install Python dependencies
         run: |
@@ -50,6 +53,8 @@ jobs:
           pip install buildozer
 
       - name: Build debug APK
+        env:
+          ANDROID_HOME: ${{ runner.temp }}/android-sdk
         run: |
           source venv/bin/activate
           export ANDROID_HOME=$HOME/android-sdk
@@ -57,6 +62,7 @@ jobs:
           buildozer android debug
 
       - name: Upload APK as artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: AutoDownloader-debug
