@@ -23,7 +23,7 @@ jobs:
           sudo apt-get install -y python3-pip python3-venv git curl unzip
           sudo apt-get install -y openjdk-17-jdk
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
- echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
 
       - name: Download Android SDK
         run: |
@@ -34,7 +34,7 @@ jobs:
           mv cmdline-tools latest
           rm cmdline-tools.zip
 
- - name: Accept licenses& install SDK components
+      - name: Accept licenses and install SDK components
         run: |
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
