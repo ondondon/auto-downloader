@@ -37,7 +37,17 @@ jobs:
         run: |
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          mkdir -p $ANDROID_HOME/licenses
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\nd975f751698a77b662f1254ddbeed3901e976f5a" >> $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\n33b6d3e0bbf0c1da093c1ae7c50a7f6b31de36a9" >> $ANDROID_HOME/licenses/android-sdk-license
+
+      - name: Install SDK components
+        run: |
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "build-tools;37.0.0"
 
       - name: Install Python dependencies
         run: |
@@ -48,10 +58,12 @@ jobs:
           pip install buildozer
 
       - name: Build debug APK
+        env:
+          ANDROID_HOME: /home/runner/android-sdk
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           source venv/bin/activate
           export ANDROID_HOME=$HOME/android-sdk
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
           buildozer android debug
 
@@ -63,21 +75,21 @@ jobs:
           path: bin/*.apk
           retention-days: 7
 
-      - name: Notify via Telegram
+      - name: Notify via Telegram (success)
         if: success()
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_TOKEN: *** secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           APK_PATH=$(find bin -name "*.apk" | head -1)
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=✅ Auto-Downloader APK build successful!%0AArtifact: ${APK_PATH}"
+            -d "text=✅ Auto-Downloader APK build successful!%0AFile: ${APK_PATH}"
 
-      - name: Notify failure via Telegram
+      - name: Notify via Telegram (failure)
         if: failure()
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_TOKEN: *** secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
