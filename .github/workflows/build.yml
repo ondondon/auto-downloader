@@ -54,7 +54,7 @@ jobs:
           source venv/bin/activate
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-          buildozer debug
+          buildozer android debug
 
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
