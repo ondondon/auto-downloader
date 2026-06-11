@@ -1,0 +1,59 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone Flutter SDK
+        run: |
+          git clone https://github.com/flutter/flutter.git --depth 1 --branch stable /opt/flutter
+
+      - name: Setup Flutter
+        run: |
+          export PATH="/opt/flutter/bin:$PATH"
+          flutter --version
+
+      - name: Accept licenses
+        run: |
+          export PATH="/opt/flutter/bin:$PATH"
+          flutter doctor --android-licenses || true
+
+      - name: Get dependencies
+        run: |
+          export PATH="/opt/flutter/bin:$PATH"
+          flutter pub get
+
+      - name: Build debug APK
+        run: |
+          export PATH="/opt/flutter/bin:$PATH"
+          flutter build apk --debug
+
+      - name: Upload APK as artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoDownloader-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+
+      - name: Notify via Telegram on success
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=✅ Auto-Downloader APK build successful!%0AFile: build/app/outputs/flutter-apk/app-debug.apk"
+
+      - name: Notify via Telegram on failure
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=❌ Auto-Downloader APK build FAILED"
